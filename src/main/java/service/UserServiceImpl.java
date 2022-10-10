@@ -1,0 +1,51 @@
+package service;
+
+import data.UsersRepository;
+import data.UsersRepositoryImpl;
+import model.User;
+
+import java.util.UUID;
+
+public class UserServiceImpl implements UserService {
+
+    UsersRepository usersRepository;
+
+    EmailVerificationService emailVerificationService;
+
+    public UserServiceImpl(UsersRepository usersRepository, EmailVerificationService emailVerificationService) {
+        this.usersRepository = usersRepository;
+        this.emailVerificationService = emailVerificationService;
+    }
+
+    @Override
+    public User createUser(String firstName, String lastName, String email, String password, String repeatPassword) {
+        if (firstName == null || firstName.trim().length() == 0) {
+            throw new IllegalArgumentException("User's first name is empty");
+        }
+        if (lastName == null || lastName.trim().length() == 0) {
+            throw new IllegalArgumentException("User's last name is empty");
+        }
+
+        User user = new User(firstName,lastName,email,UUID.randomUUID().toString());
+
+        boolean isUserCreated;
+
+        try {
+            isUserCreated = usersRepository.save(user);
+        }catch (RuntimeException exception){
+            throw new UserServiceException(exception.getMessage());
+        }
+
+        if (!isUserCreated) throw  new UserServiceException("Could not create user");
+        try {
+            emailVerificationService.scheduleEmailConfirmation(user);
+        } catch (RuntimeException e) {
+            throw new UserServiceException(e.getMessage());
+        }
+
+        return user;
+
+    }
+
+    public void demoMethod(){        System.out.println("Demo");    }
+}
